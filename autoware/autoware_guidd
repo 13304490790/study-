@@ -1,0 +1,128 @@
+一个基本的launch文件不仅包括需要启动的节点信息，还可能包含参数、话题和服务等信息。这使得我们可以灵活地控制和配置每个节点的行为。
+1.创建launch文件：
+	ROS中的launch文件是一种XML格式的配置文件，主要用于同时启动和管理多个节点。
+	XML文件必须包含一个根元素，launch文件中的根元素采用<launch>标签定义，文件中的其他内容都必须包		含在这个标签中
+2、launch文件的基本结构：
+	<xml> xml文件标配
+	<?xml version="1.0" encoding="UTF-8"?>
+	ersion="1.0" 表明使用的是XML 1.0 版本。encoding="UTF-8" 表示文档使用UTF-8编码。
+	<launch>：这是整个launch文件的根元素。
+	
+	<group> : 标签常用于launch文件中来组织一组节点或配置。scoped 属性可能用于控制这些节点或配置的作用域。如果scoped="false"，则这些节点或配置可能不是私有的，而是全局可见的。
+	<group scoped="false">
+	
+	<let>: 是xml文件对变量进行赋值操作
+
+	```xml
+	<let name="rviz_respawn" value="false" if="$(var scenario_simulation)"/>
+	```
+	* `name="rviz_respawn"`：定义了一个名为`rviz_respawn`的变量。
+	* `value="false"`：如果条件满足，该变量的值将被设置为`false`。
+	* `if="$(var scenario_simulation)"`：这是一个条件语句。它检查`scenario_simulation`这个变量是否已经被设置且其值为`true`。如果是这样，那么`rviz_respawn`的值将被设置为`false`。
+	2. **第二行**：
+
+
+	```xml
+	<let name="rviz_respawn" value="true" unless="$(var scenario_simulation)"/>
+	```
+	* 与第一行类似，但这次我们使用了`unless`而不是`if`。
+	* `unless="$(var scenario_simulation)"`：这个条件与第一行相反。它检查`scenario_simulation`这个变量是否**未被设置**或其值为`false`。如果是这样，那么`rviz_respawn`的值将被设置为`true`。
+
+	**总结**：
+
+	* 如果`scenario_simulation`被设置为`true`，那么`rviz_respawn`将被设置为`false`。
+	* 如果`scenario_simulation`未被设置或其值为`false`，那么`rviz_respawn`将被设置为`true`。
+
+	这种配置方式允许你根据`scenario_simulation`的值来动态地设置`rviz_respawn`的值，而不必手动更改它。
+	
+	<node>：定义一个要启动的ROS节点，包括节点的可执行文件、参数和其他设置。
+	
+	<param>：在参数服务器上设置或重置参数。
+	
+	<arg>：定义命令行参数，可以在运行时通过roslaunch命令传入。
+	<arg name="launch_perception" default="true" description="launch perception"/>
+	在launch文件的后续部分，你可以使用$(var launch_perception)来引用这个参数的值。例如，你可以根据launch_perception的值来决定是否启动某个节点：
+	<node if="$(arg launch_perception)" pkg="perception_package" type="perception_node" name="perception_node" />
+	在这个例子中，如果launch_perception的值为true（或者没有提供该参数，因此使用默认值true），那么perception_node节点将会被启动。如果launch_perception的值为false，那么该节点将不会被启动。
+	roslaunch my_package my_launch.launch launch_perception:=false
+	在这个命令中，launch_perception参数的值被设置为false，从而覆盖了launch文件中的默认值。
+
+	<include>：包含其他launch文件，用于模块化和复用。
+	<include file="$(find-pkg-share autoware_launch)/launch/autoware.launch.xml"> 是一个在ROS（Robot Operating System）的launch文件中常见的标签，用于包含（或导入）另一个launch文件。这里，它特定地包含了autoware_launch包的launch文件夹下的autoware.launch.xml文件。
+
+	让我们分解这个标签：
+
+	<include>: 这是ROS launch文件的标签，用于包含另一个launch文件。
+	file="$(find-pkg-share autoware_launch)/launch/autoware.launch.xml": 这指定了要包含的launch文件的路径。
+	$(find-pkg-share autoware_launch): 这是一个ROS的宏，它会查找名为autoware_launch的包的share目录。在ROS 2中，pkg-share是一个更常用的概念，因为它涵盖了ROS 1中的share目录和其他一些资源。但在ROS 1中，通常使用$(find ...)宏来查找包的路径，然后再结合路径拼接来找到特定的文件。然而，find-pkg-share宏可能是一个自定义的或者特定于某个版本的ROS的宏。
+	/launch/autoware.launch.xml: 这是相对于上面找到的share目录的子路径，指向了要包含的autoware.launch.xml文件。
+	当你在一个launch文件中使用<include>标签时，它会在解析过程中将其所包含的另一个launch文件的所有内容复制到当前文件中。这允许你创建可重用和模块化的launch文件，从而更容易地管理和组织你的ROS节点和参数。
+
+	总之，这个<include>标签用于将autoware_launch包中的autoware.launch.xml文件包含到当前的launch文件中。
+	
+launch 文件的启动
+	通常启动节点命令为：
+	ros2 run package-name execute-name
+	但是启动多个节点时，命令很臃肿，因此需要创建py文件启动多个节点。
+	
+	如何编写launch文件
+	首先创建文件后缀名为：   .launch.py结尾的Python脚本
+	
+	1. 加载引用库，譬如autoware 
+	
+	这段代码主要涉及到ROS 2（Robot Operating System 2）的启动系统（`launch` 和 `launch_ros`），它用于定义和启动ROS 2的节点和容器。以下是对这段代码中各个部分的简要解释：
+
+	1. **导入模块**:
+
+
+	* `import launch`: 导入ROS 2的`launch`模块，用于定义启动描述。
+	* `from launch.actions ...`: 从`launch.actions`模块中导入各种启动动作，如声明启动参数、包含其他启动描述等。
+	* `from launch.conditions ...`: 从`launch.conditions`模块中导入条件，用于在启动描述中定义条件逻辑。
+	* `from launch.launch_description_sources ...`: 导入用于获取启动描述源（如Python文件）的类。
+	* `from launch.substitutions ...`: 导入替换机制，允许在启动描述中使用变量。
+	* `from launch_ros.actions ...`: 从`launch_ros`模块中导入与ROS 2节点和容器相关的启动动作。
+	* `from launch_ros.descriptions ...`: 导入与ROS 2节点描述相关的类。
+	* `from launch_ros.substitutions ...`: 导入与ROS 2相关的替换机制。
+	* `import yaml`: 导入`yaml`模块，用于处理YAML格式的文件，但在这段代码中并未直接使用。
+	2. **主要类和函数**:
+
+
+	* `DeclareLaunchArgument`: 声明一个启动参数，该参数可以在启动描述的其他部分中引用。
+	* `GroupAction`: 定义一个动作组，允许将多个动作组合在一起作为一个整体处理。
+	* `IncludeLaunchDescription`: 包含另一个启动描述文件或源。
+	* `OpaqueFunction`: 允许在启动描述中执行自定义的Python函数。
+	* `SetLaunchConfiguration`: 设置一个启动配置的值。
+	* `IfCondition` 和 `UnlessCondition`: 定义条件，用于在启动描述中启用或禁用某些动作。
+	* `PythonLaunchDescriptionSource`: 加载Python文件作为启动描述源。
+	* `LaunchConfiguration`: 引用一个启动配置的值，该值可以在启动描述的其他部分中设置或声明。
+	* `ComposableNodeContainer`: 定义一个可组合的节点容器，允许在其中运行多个可组合的节点。
+	* `LoadComposableNodes`: 加载并运行一个或多个可组合的节点。
+	* `PushRosNamespace`: 将ROS命名空间推送到当前命名空间，影响后续节点的命名空间。
+	* `ComposableNode`: 描述一个可组合的节点，可以在`LoadComposableNodes`中使用。
+	* `FindPackageShare`: 查找并返回给定ROS 2包的共享目录的路径。
+
+	创建一个名为做generate_launch_description的函数：
+	在 ROS2 中，传参往往需要用到 LaunchConfiguration()
+	
+	
+	在给出的代码片段中，定义了两个`SetLaunchConfiguration`动作，它们分别用于设置名为`"container_executable"`的启动配置的值。这个配置的值取决于另一个启动配置`"use_multithread"`是否被设置为`True`。
+
+	这里是每个`SetLaunchConfiguration`动作的解释：
+
+	1. `set_container_executable`:
+	   - 当`"use_multithread"`配置的值不是`True`（即`False`或未设置）时，此动作会被执行。
+	   - 它将`"container_executable"`配置的值设置为`"component_container"`。
+
+	2. `set_container_mt_executable`:
+	   - 当`"use_multithread"`配置的值是`True`时，此动作会被执行。
+	   - 它将`"container_executable"`配置的值设置为`"component_container_mt"`。
+
+	这里的`condition`参数用于指定一个条件，只有当该条件为真时，`SetLaunchConfiguration`动作才会被执行。`UnlessCondition`表示除非给定条件为真，否则执行动作；而`IfCondition`表示如果给定条件为真，则执行动作。
+	在实际应用中，你可能会在启动描述中进一步使用这个`"container_executable"`配置，比如来启动一个可执行文件或者容器。例如，你可能会有一个动作，它使用`$(var container_executable)`来引用这个配置，并据此决定要运行哪个可执行文件。
+	这种方式允许你根据启动时的配置（在这种情况下是`"use_multithread"`）来动态地选择使用哪个可执行文件或容器来运行你的ROS 2组件。
+	
+	
+
+
+
+
